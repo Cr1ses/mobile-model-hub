@@ -1,0 +1,31 @@
+# 编译产物与中间目录
+build/
+*.class
+*.dex
+*.apk
+
+# 签名密钥：绝不入库
+*.keystore
+*.jks
+*.p12
+debug.keystore
+
+# 本地环境与凭据
+.env
+.env.*
+*.local
+credentials*
+*credentials.yaml
+
+# IDE / 系统
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件
+*.log
+*.tmp
+*.bak

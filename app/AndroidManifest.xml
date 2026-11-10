@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.wbgateway"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+
+    <!-- 访问上游 AI 服务 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- 前台服务：保证网关在后台常驻（其他 AI App 调用时不中断） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        后台保活：阻止 CPU 深度休眠（息屏后 TCP 得不到调度，请求会超时）。
+        只阻止 CPU 休眠，不保持屏幕常亮。
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!--
+        开机自启：重启手机后网关能自己回来，否则用户以为「又坏了」。
+        注意：国产 ROM 还会额外要求「自启动」白名单，那一层需要用户手动开。
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+        忽略电池优化：Android 6+ 可以申请让系统把本应用排除在 Doze 之外。
+        没有它，息屏几分钟后网络会被冻结。
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            Raccoon 登录：它的手机号登录带阿里云人机验证，服务端对 captcha_token
+            做了来源绑定，只在页面环境里有效 —— 所以必须用 WebView 走官方网页登录，
+            登录后从 localStorage 取 access_token（详见 RaccoonLoginActivity 注释）。
+        -->
+        <activity
+            android:name=".RaccoonLoginActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!--
+            ZCode 登录：官方 OAuth 的回调是自定义 scheme `zcode://oauth/callback`。
+            内置 WebView 里用 shouldOverrideUrlLoading 直接截住这个回调即可，
+            不需要注册系统 scheme（注册会污染系统意图，且从外部浏览器登录时未必回到本 App）。
+        -->
+        <activity
+            android:name=".ZcodeLoginActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!--
+            华为 CodeArts 登录：回调是 http://127.0.0.1:PORT/oauth/callback，
+            同样在 WebView 里截住（不需要真的起本地服务）。
+        -->
+        <activity
+            android:name=".CodeArtsLoginActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
+
+        <service
+            android:name=".GatewayService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!--
+            开机自启：收到 BOOT_COMPLETED 后把网关拉起来。
+            exported=false 也能收到系统广播（系统不受 exported 限制）。
+        -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="false"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
